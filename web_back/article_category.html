@@ -16,6 +16,7 @@
     <script src="./js/template-web.js"></script>
 </head>
 
+
 <body>
     <div class="container-fluid">
         <div class="common_title">
@@ -74,7 +75,8 @@
                 <tfoot>
                     <tr>
                         <td colspan="3" class="text-center">
-                            <a href="#" class="btn btn-success" data-toggle="modal" data-target="#addModal">新增分类</a>
+                            <a href="#" id="addCategory" class="btn btn-success" data-toggle="modal"
+                                data-target="#addModal">新增分类</a>
                         </td>
                     </tr>
                 </tfoot>
@@ -91,13 +93,15 @@
                 </div>
                 <div class="modal-body">
                     <form>
+                        <!-- input标签的type属性是hidden,那他就是一个隐藏域,他本身就是看不见的. -->
+                        <input type="hidden" name="id" id="recipient-id">
                         <div class="form-group">
                             <label for="recipient-name" class="control-label">分类名称:</label>
-                            <input type="text" class="form-control" id="recipient-name">
+                            <input type="text" name="name" class="form-control" id="recipient-name">
                         </div>
                         <div class="form-group">
                             <label for="message-text" class="control-label">分类别名:</label>
-                            <input type="text" class="form-control" id="recipient-nickname">
+                            <input type="text" name="slug" class="form-control" id="recipient-nickname">
                         </div>
                     </form>
                 </div>
@@ -116,7 +120,7 @@
         });
 
         $('#model_shutoff').click(function () {
-            alert('shutoff');
+            // alert('shutoff');
             $('#addModal').modal('hide');
         });
 
@@ -134,59 +138,154 @@
     </script>
 
     <script type="text/html" id="muban">
+        <!-- 生成模板 -->
         {{each data}}
-        <tr>
-            <td>{{$value.name}}</td>
-            <td>{{$value.slug}}</td>
-            <td class="text-center">
-                <a href="javascript:editTr({&quot;id&quot;:&quot;3&quot;,&quot;slug&quot;:&quot;living&quot;,&quot;name&quot;:&quot;会生活&quot;});"
-                    class="btn btn-info btn-xs">编辑</a>
-                <a href="javascript:deleteTr( 3 );" class="btn btn-danger btn-xs">删除</a>
-            </td>
-        </tr>
+    <tr>
+        <td>{{$value.name}}</td>
+        <td>{{$value.slug}}</td>
+        <td class="text-center">
+            <a href="javascript:void(0);" data-id="{{$value.id}}" class="btn btn-info btn-xs btn-edit">编辑</a>
+            <a href="javascript:void(0);" data-id="{{$value.id}}" class="btn btn-danger btn-xs btn-delete">删除</a>
+        </td>
+    </tr>
 
-        {{/each}}
+    {{/each}}
     </script>
 
     <script>
         $(function () {
+            /*
+                  获取文章分类信息
+                  步骤
+                  1. 进入页面之后
+                  2. 通过ajax获取数据
+                  3. 数据获取到之后渲染到页面上
+                  1. 结合模板引擎来渲染
+                  */
+            // 页面渲染封装函数
+            function fengzhuang() {
+                $.ajax({
+                    type: "get",
+                    url: "http://localhost:8000/admin/category_search",
+                    success: function (backData) {
+                        console.log(backData);
+                        var tianjia = template('muban', backData);
+                        $('tbody').html(tianjia);
+                    }
+                });
+            }
+
+            fengzhuang()
 
 
-            $.ajax({
-                type: "get",
-                url: "http://localhost:8000/admin/category_search",
-                success: function (backData) {
-                    console.log(backData);
-                    var tianjia = template('muban', backData);
-                    $('tbody').html(tianjia);
-                }
-            });
 
+
+            // 给新增分类按钮增加点击事件
             $('#model_add').on('click', function () {
-                var recipient_name = $('#recipient-name').val();
-                var recipient_nickname = $('#recipient-nickname').val();
+
+                // 判断按钮(新增/保存)是否存在success这个类如果存在则是编辑保存
+                if ($(this).hasClass('btn-success')) {
+
+                    // 拿到每个信息的val值
+                    // var editId = $('#recipient-id').val();
+                    // var editName =  $('#recipient-name').val();
+                    // var editNickName =  $('#recipient-nickname').val();
+
+                    var data1 = $('form').serialize();
+                    console.log(data1);
+
+                    //这个方法首先是jQuery的方法,
+                    //会把form表单里面有name属性的元素的值.拼接成name=value&name2=value2这种格式的字符串
+                    //id=8&name=军事2&slug=junshi
+
+                    // 发送ajax请求.编辑修改信息
+                    $.ajax({
+                        type: 'post',
+                        url: 'http://localhost:8000/admin/category_edit',
+                        data: data1,
+                        // data:{
+                        //     id:editId,
+                        //     name:editName,
+                        //     slug:editNickName
+                        // },
+                        success: function (backData) {
+                            console.log(backData);
+                            if (backData.code == 200) {
+                                fengzhuang();
+                            }
+                        }
+
+                    })
+                } else {
+                    
+                    // 保存新增的信息
+                    var recipient_name = $('#recipient-name').val();
+                    var recipient_nickname = $('#recipient-nickname').val();
+                    $.ajax({
+                        type: 'post',
+                        url: 'http://localhost:8000/admin/category_add',
+                        data: {
+                            name: recipient_name,
+                            slug: recipient_nickname
+                        },
+                        success: function (backData) {
+                            fengzhuang()
+                        }
+                    })
+                }
+
+            })
+
+            // 给编辑按钮委托注册点击事件
+            $('tbody').on('click', 'a.btn-edit', function () {
+                var lbm = $(this).parent().prev().prev().text(); //分类名
+                var wzm = $(this).parent().prev().text(); //分类别名
+                var id = $(this).attr('data-id');
+
+                // 吧已有的信息传递到编辑框
+                $('#recipient-name').val(lbm);
+                $('#recipient-nickname').val(wzm);
+                $('#recipient-id').val(id);
+
+                // 因为用同一个模态框,吧信息更改下
+                $('.modal-title').html('修改分类名称')
+                $('#model_add').addClass('btn-success').text('保存');
+
+            })
+            // 给新增按钮添加点击事件
+            $('#addCategory').on('click', function () {
+                // 清空模态框信息
+                $('#recipient-name').val('');
+                $('#recipient-nickname').val('');
+
+                // 因为用同一个模态框,吧信息更改下
+                $('.modal-title').html('新增分类名称');
+                $('#model_add').removeClass('btn-success').text('新增');
+
+
+            })
+
+            // 委托tbody给删除按钮注册点击事件
+            $('tbody').on('click', 'a.btn-delete', function () {
+                var this1 = $(this);
+                var id = $(this).attr('data-id');
 
                 $.ajax({
                     type: 'post',
-                    url: 'http://localhost:8000/admin/category_add',
+                    url: 'http://localhost:8000/admin/category_delete',
                     data: {
-                        name: recipient_name,
-                        slug: recipient_nickname
+                        id: id
                     },
                     success: function (backData) {
-                        $.ajax({
-                            type: "get",
-                            url: "http://localhost:8000/admin/category_search",
-                            success: function (backData) {
-                                console.log(backData);
-                                var tianjia = template('muban', backData);
-                                $('tbody').html(tianjia);
-                            }
-                        });
+                        console.log(backData);
+                        // this1.parent().parent().css('display','none');
+                        this1.parent().parent().remove();
                     }
-                })
-            })
 
+
+                })
+
+            })
 
         })
     </script>
