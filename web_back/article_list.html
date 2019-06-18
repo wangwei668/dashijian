@@ -280,7 +280,7 @@
             <td class="text-center">{{v.state}}</td>
             <td class="text-center">
                 <a href="article_edit.html" class="btn btn-default btn-xs">编辑</a>
-                <a href="javascript:void();" data-id="{{v.id}}" class="btn btn-danger btn-xs">删除</a>
+                <a href="javascript:void();" data-id="{{v.id}}" class="btn btn-danger btn-xs btn-delete">删除</a>
             </td>
         </tr>
         {{/each}}
@@ -326,10 +326,10 @@
                             // 分页插件总页码生成
                             var totalPages = backData.totalPage;
                             // myYema = -1;
-                            if (myYema != totalPages ) {
+                            if (myYema != totalPages) {
                                 myYema = totalPages;
 
-                                var currentPage = 1;//$pagination.twbsPagination('getCurrentPage');
+                                var currentPage = 1; //$pagination.twbsPagination('getCurrentPage');
                                 $pagination.twbsPagination('destroy');
                                 $pagination.twbsPagination($.extend({}, defaultOpts, {
                                     startPage: currentPage,
@@ -376,10 +376,6 @@
                 }
             })
 
-
-
-
-
             //点击筛选按钮,发送ajax请求,获取对应类型的所有文章.
             $('#btnSearch').on('click', function (e) {
                 e.preventDefault();
@@ -387,10 +383,29 @@
                 wenzhang(1);
 
             })
+            //点击删除按钮删除文章.
+            $('tbody').on('click','.btn-delete',function(){
+            
+            var this1 = $(this)
+            var id = $(this).attr('data-id');
+            $.ajax({
+                type:'get',
+                url:'http://localhost:8000/admin/article_delete',
+                data:{
+                    id:id
+                },
+                success:function(backData){
+                    console.log(backData);
+                    this1.parent().parent().remove();
+                }
+            })
+
+
+
+            })
+
             $('#btnSearch').click();
         })
-
-
     </script>
 
 </body>
